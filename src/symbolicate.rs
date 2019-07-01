@@ -87,7 +87,8 @@ pub struct Symbolicate {
 impl Symbolicate {
     pub fn new<P:AsRef<Path>>(path: P) -> Result<Symbolicate, Error> {
         let kind = ErrorKind::Zip(path.as_ref().to_path_buf());
-        let reader = File::open(&path).context(kind.clone())?;
+        let all = std::fs::read(&path).context(kind.clone())?;
+        let reader = std::io::Cursor::new(all);
         let mut zip = zip::ZipArchive::new(reader).context(kind.clone())?;
         let mut dsyms = Vec::new();
         for i in 0..zip.len()
@@ -224,6 +225,16 @@ impl fmt::Display for Frame {
 
 
 pub struct Location(pub addr2line::Location);
+
+impl PartialEq for Location {
+    fn eq(&self, other: &Location) -> bool {
+        self.0.file == other.0.file &&
+        self.0.line == other.0.line &&
+        self.0.column == other.0.column
+    }
+}
+
+impl Eq for Location {}
 
 impl fmt::Display for Location {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
